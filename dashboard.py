@@ -44,12 +44,16 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# Cache data loading
+# Cache data loading - Using relative paths for web deployment
 @st.cache_data
 def load_data():
-    path = '/Users/anshul/Desktop/projects/clustering_crp/dataset/train_simple.csv'
+    # Relative path is necessary for Streamlit Cloud deployment
+    path = 'dataset/train_simple.csv'
     if not os.path.exists(path):
-        return None
+        # Fallback for local development if running from a different subfolder
+        path = os.path.join(os.getcwd(), 'dataset', 'train_simple.csv')
+        if not os.path.exists(path):
+            return None
     df = pd.read_csv(path)
     crp_mean = df['CRP'].mean()
     df['Status'] = df['CRP'].apply(lambda x: 'High_inflammation' if x > crp_mean else 'Low_inflammation')
@@ -67,13 +71,13 @@ def train_model(df):
 data_tuple = load_data()
 
 if data_tuple is None:
-    st.error("Training data not found. Please ensure dataset/train_simple.csv exists.")
+    st.error("Training data not found. Please ensure 'dataset/train_simple.csv' is uploaded to your repository.")
 else:
     df, crp_mean = data_tuple
     model = train_model(df)
     
     st.sidebar.title("Configuration")
-    mode = st.sidebar.radio("Analysis Mode", ["Population Explorer", "Individual Predictor"])
+    mode = st.sidebar.radio("Analysis Mode", ["Population Explorer", "Individual Regression Analysis"])
     
     st.sidebar.markdown("---")
     st.sidebar.subheader("Reference Data")
@@ -180,7 +184,7 @@ else:
                 template="plotly_dark"
             )
             
-            # Add input point with professional label
+            # Add input point
             fig.add_trace(go.Scatter3d(
                 x=[inputs[var_x_3d]], y=[inputs[var_z_3d]], z=[pred_crp],
                 mode='markers',
